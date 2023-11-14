@@ -1,12 +1,8 @@
 package com.sweeft.contactsapp
 
 import android.view.LayoutInflater
-import android.view.View
 import android.view.ViewGroup
-import android.widget.ImageView
-import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
-import com.sweeft.contactsapp.databinding.ContactBinding
 
 
 class ContactsAdapter(private var contactList: List<Contact>) :
@@ -24,7 +20,6 @@ class ContactsAdapter(private var contactList: List<Contact>) :
     override fun onBindViewHolder(holder: ContactViewHolder, position: Int) {
         val contact = contactList[position]
 
-        // Set the data to views in the ViewHolder
         holder.bind(contact)
     }
 
@@ -33,10 +28,12 @@ class ContactsAdapter(private var contactList: List<Contact>) :
     }
 
 
+    // Update the data and notife adapter
     fun updateData(newContactList: List<Contact>) {
         contactList = newContactList
         notifyDataSetChanged()
     }
 
 }
+
 

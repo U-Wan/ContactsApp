@@ -3,6 +3,7 @@ package com.sweeft.contactsapp
 import android.Manifest
 import android.app.AlertDialog
 import android.content.ContentResolver
+import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.database.Cursor
@@ -16,6 +17,7 @@ import android.provider.ContactsContract
 import android.provider.Settings
 import android.text.Editable
 import android.text.TextWatcher
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -33,11 +35,10 @@ class ContactsFragment : Fragment() {
     private val contactList = mutableListOf<Contact>()
     private lateinit var recyclerView: RecyclerView
 
-    //
-    private val DEBOUNCE_DELAY = 300L
+    private val DEBOUNCE_DELAY = 50L
 
-    private val debounceHandler = Handler(Looper.getMainLooper())
-    private val debounceRunnable = Runnable { applySearchFilter() }
+   // private val debounceHandler = Handler(Looper.getMainLooper())
+    //private val debounceRunnable = Runnable { applySearchFilter() }
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -47,8 +48,6 @@ class ContactsFragment : Fragment() {
         val view = inflater.inflate(R.layout.fragment_contacts, container, false)
         recyclerView = view.findViewById(R.id.recyclerView)
 
-
-
         val layoutManager = LinearLayoutManager(requireContext())
         recyclerView.layoutManager = layoutManager
 
@@ -57,14 +56,27 @@ class ContactsFragment : Fragment() {
             adapter = ContactsAdapter(contactList)
             recyclerView.adapter = adapter
         } else {
-            requestContactsPermission()
+            if (!hasRequestedPermissionBefore()) {
+                requestContactsPermission()
+                markPermissionAsRequested()
+            } else {
+                showPermissionDeniedDialog()
+            }
         }
-
-        setupSearchFunctionality() // Add this line to set up the search functionality
+       // setupSearchFunctionality() // Add this line to set up the search functionality
 
         return view
     }
 
+    private fun hasRequestedPermissionBefore(): Boolean {
+        val preferences = requireActivity().getPreferences(Context.MODE_PRIVATE)
+        return preferences.getBoolean("hasRequestedPermission", false)
+    }
+
+    private fun markPermissionAsRequested() {
+        val preferences = requireActivity().getPreferences(Context.MODE_PRIVATE)
+        preferences.edit().putBoolean("hasRequestedPermission", true).apply()
+    }
     private fun checkContactsPermission(): Boolean {
         return ContextCompat.checkSelfPermission(
             requireContext(),
@@ -105,7 +117,6 @@ class ContactsFragment : Fragment() {
             }
         }
     }
-
     private fun getPhoneNumber(contentResolver: ContentResolver, contactId: String): String {
         val phoneCursor: Cursor? = contentResolver.query(
             ContactsContract.CommonDataKinds.Phone.CONTENT_URI,
@@ -125,7 +136,6 @@ class ContactsFragment : Fragment() {
             }
         } ?: ""
     }
-
     private fun getContactPhoto(contentResolver: ContentResolver, contactId: String): Bitmap? {
         val photoUri = getPhotoUri(contentResolver, contactId)
 
@@ -133,7 +143,6 @@ class ContactsFragment : Fragment() {
             BitmapFactory.decodeStream(contentResolver.openInputStream(it))
         }
     }
-
     private fun getPhotoUri(contentResolver: ContentResolver, contactId: String): Uri? {
         val photoCursor: Cursor? = contentResolver.query(
             ContactsContract.Data.CONTENT_URI,
@@ -152,6 +161,8 @@ class ContactsFragment : Fragment() {
         }
     }
 
+
+    //dialog
     private fun showPermissionDeniedDialog() {
         val dialog = AlertDialog.Builder(requireContext())
             .setTitle("Permission Required")
@@ -184,48 +195,15 @@ class ContactsFragment : Fragment() {
         when (requestCode) {
             REQUEST_READ_CONTACTS -> {
                 if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                    // Permission granted, fetch and display contacts
                     fetchContacts()
                     adapter.updateData(contactList)
                 } else {
-                    // Permission denied, show a dialog
                     showPermissionDeniedDialog()
                 }
             }
         }
     }
-
-
-
-    private fun setupSearchFunctionality() {
-        val etSearch = view?.findViewById<EditText>(R.id.et_entered_number)
-        etSearch?.addTextChangedListener(object : TextWatcher {
-            override fun beforeTextChanged(charSequence: CharSequence?, p1: Int, p2: Int, p3: Int) {
-                // Not needed for this example
-            }
-
-            override fun onTextChanged(charSequence: CharSequence?, p1: Int, p2: Int, p3: Int) {
-                // Not needed for this example
-            }
-
-            override fun afterTextChanged(editable: Editable?) {
-                debounceHandler.removeCallbacks(debounceRunnable)
-                debounceHandler.postDelayed(debounceRunnable, DEBOUNCE_DELAY)
-            }
-        })
-    }
-    private fun applySearchFilter() {
-        val etSearch = view?.findViewById<EditText>(R.id.et_entered_number)
-        val query = etSearch?.text.toString().toLowerCase(Locale.getDefault())
-
-        val filteredList = contactList.filter {
-            it.name.toLowerCase(Locale.getDefault()).contains(query) ||
-                    it.phoneNumber.toLowerCase(Locale.getDefault()).contains(query)
-        }
-
-        adapter.updateData(filteredList)
-    }
-
+    //
 
 
     companion object {
