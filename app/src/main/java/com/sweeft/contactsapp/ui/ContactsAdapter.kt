@@ -1,21 +1,18 @@
-package com.sweeft.contactsapp
+package com.sweeft.contactsapp.ui
 
 import android.view.LayoutInflater
 import android.view.ViewGroup
 import androidx.recyclerview.widget.RecyclerView
-
-
+import com.sweeft.contactsapp.data.Contact
+import com.sweeft.contactsapp.databinding.ContactBinding
 
 class ContactsAdapter(private var contactList: List<Contact>) :
     RecyclerView.Adapter<ContactViewHolder>() {
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ContactViewHolder {
-        val itemView = LayoutInflater.from(parent.context).inflate(
-            R.layout.contact,
-            parent,
-            false
-        )
-        return ContactViewHolder(itemView)
+        val inflater = LayoutInflater.from(parent.context)
+        val binding = ContactBinding.inflate(inflater, parent, false)
+        return ContactViewHolder(binding)
     }
 
     override fun onBindViewHolder(holder: ContactViewHolder, position: Int) {
@@ -27,17 +24,13 @@ class ContactsAdapter(private var contactList: List<Contact>) :
         return contactList.size
     }
 
-    // Update the data and notify the adapter
     fun updateData(newContactList: List<Contact>) {
         contactList = newContactList
         notifyDataSetChanged()
     }
 
-
-    //
-    fun setFilteredList(mList: List<Contact>){
-        this.contactList = mList
+    fun setFilteredList(filteredContactList: List<Contact>) {
+        contactList = filteredContactList
         notifyDataSetChanged()
     }
 }
-

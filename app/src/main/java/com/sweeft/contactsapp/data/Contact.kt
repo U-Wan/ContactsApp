@@ -1,4 +1,4 @@
-package com.sweeft.contactsapp
+package com.sweeft.contactsapp.data
 
 import android.graphics.Bitmap
 

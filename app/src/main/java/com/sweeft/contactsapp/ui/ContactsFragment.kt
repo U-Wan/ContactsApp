@@ -1,4 +1,4 @@
-package com.sweeft.contactsapp
+package com.sweeft.contactsapp.ui
 
 import android.Manifest
 import android.app.AlertDialog
@@ -15,13 +15,9 @@ import android.os.Handler
 import android.os.Looper
 import android.provider.ContactsContract
 import android.provider.Settings
-import android.text.Editable
-import android.text.TextWatcher
-import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.EditText
 import android.widget.Toast
 import androidx.appcompat.widget.SearchView
 import androidx.core.app.ActivityCompat
@@ -29,6 +25,8 @@ import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import com.sweeft.contactsapp.R
+import com.sweeft.contactsapp.data.Contact
 import java.io.FileNotFoundException
 import java.util.ArrayList
 import java.util.Locale
@@ -38,9 +36,11 @@ class ContactsFragment : Fragment() {
     private lateinit var adapter: ContactsAdapter
     private val contactList = mutableListOf<Contact>()
     private lateinit var recyclerView: RecyclerView
-
     private lateinit var searchView: SearchView
 
+
+    private val DEBOUNCE_DELAY = 400L
+    private val debounceHandler = Handler(Looper.getMainLooper())
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -49,12 +49,10 @@ class ContactsFragment : Fragment() {
     ): View? {
         val view = inflater.inflate(R.layout.fragment_contacts, container, false)
         recyclerView = view.findViewById(R.id.recyclerView)
-
         searchView = view.findViewById(R.id.et_entered_number)
-
-
         val layoutManager = LinearLayoutManager(requireContext())
         recyclerView.layoutManager = layoutManager
+
 
         if (checkContactsPermission()) {
             fetchContacts()
@@ -69,18 +67,19 @@ class ContactsFragment : Fragment() {
             }
         }
 
-        ///
-
         searchView.setOnQueryTextListener(object : SearchView.OnQueryTextListener {
             override fun onQueryTextSubmit(query: String?): Boolean {
                 return false
             }
 
             override fun onQueryTextChange(newText: String?): Boolean {
-                filterList(newText)
+                debounceHandler.removeCallbacksAndMessages(null)
+                debounceHandler.postDelayed(
+                    { filterList(newText) },
+                    DEBOUNCE_DELAY
+                )
                 return true
             }
-
         })
         return view
     }
@@ -97,10 +96,8 @@ class ContactsFragment : Fragment() {
 
             if (filteredList.isEmpty()) {
 
-                Toast.makeText(activity, "No Data found", Toast.LENGTH_SHORT).show();
+                Toast.makeText(activity, "No Data found", Toast.LENGTH_SHORT).show()
                 adapter.setFilteredList(emptyList())
-
-
             } else {
                 adapter.setFilteredList(filteredList)
             }
@@ -158,7 +155,7 @@ class ContactsFragment : Fragment() {
         requestCode: Int,
         permissions: Array<out String>,
         grantResults: IntArray
-    ) {
+    )  {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
 
         when (requestCode) {
@@ -169,6 +166,25 @@ class ContactsFragment : Fragment() {
                 } else {
                     showPermissionDeniedDialog()
                 }
+            }
+        }
+    }
+
+
+    private fun getPhotoUri(contentResolver: ContentResolver, contactId: String): Uri? {
+        val photoCursor: Cursor? = contentResolver.query(
+            ContactsContract.Data.CONTENT_URI,
+            arrayOf(ContactsContract.CommonDataKinds.Photo.PHOTO_URI),
+            ContactsContract.Data.CONTACT_ID + " = ? AND " + ContactsContract.Data.MIMETYPE + " = ?",
+            arrayOf(contactId, ContactsContract.CommonDataKinds.Photo.CONTENT_ITEM_TYPE),
+            null
+        )
+
+        return photoCursor?.use { photoCursorInner ->
+            if (photoCursorInner.moveToFirst()) {
+                Uri.parse(photoCursorInner.getString(0))
+            } else {
+                null
             }
         }
     }
@@ -215,23 +231,6 @@ class ContactsFragment : Fragment() {
         // Load the default photo from resources
         return BitmapFactory.decodeResource(resources, R.drawable.harold)
     }
-    private fun getPhotoUri(contentResolver: ContentResolver, contactId: String): Uri? {
-        val photoCursor: Cursor? = contentResolver.query(
-            ContactsContract.Data.CONTENT_URI,
-            arrayOf(ContactsContract.CommonDataKinds.Photo.PHOTO_URI),
-            ContactsContract.Data.CONTACT_ID + " = ? AND " + ContactsContract.Data.MIMETYPE + " = ?",
-            arrayOf(contactId, ContactsContract.CommonDataKinds.Photo.CONTENT_ITEM_TYPE),
-            null
-        )
-
-        return photoCursor?.use { photoCursorInner ->
-            if (photoCursorInner.moveToFirst()) {
-                Uri.parse(photoCursorInner.getString(0))
-            } else {
-                null
-            }
-        }
-    }
     private fun getPhoneNumber(contentResolver: ContentResolver, contactId: String): String {
         val phoneCursor: Cursor? = contentResolver.query(
             ContactsContract.CommonDataKinds.Phone.CONTENT_URI,
@@ -251,8 +250,6 @@ class ContactsFragment : Fragment() {
             }
         } ?: ""
     }
-
-
     companion object {
         private const val REQUEST_READ_CONTACTS = 123
     }
