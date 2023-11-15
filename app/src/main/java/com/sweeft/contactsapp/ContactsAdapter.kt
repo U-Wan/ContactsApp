@@ -5,6 +5,7 @@ import android.view.ViewGroup
 import androidx.recyclerview.widget.RecyclerView
 
 
+
 class ContactsAdapter(private var contactList: List<Contact>) :
     RecyclerView.Adapter<ContactViewHolder>() {
 
@@ -19,7 +20,6 @@ class ContactsAdapter(private var contactList: List<Contact>) :
 
     override fun onBindViewHolder(holder: ContactViewHolder, position: Int) {
         val contact = contactList[position]
-
         holder.bind(contact)
     }
 
@@ -27,13 +27,17 @@ class ContactsAdapter(private var contactList: List<Contact>) :
         return contactList.size
     }
 
-
-    // Update the data and notife adapter
+    // Update the data and notify the adapter
     fun updateData(newContactList: List<Contact>) {
         contactList = newContactList
         notifyDataSetChanged()
     }
 
-}
 
+    //
+    fun setFilteredList(mList: List<Contact>){
+        this.contactList = mList
+        notifyDataSetChanged()
+    }
+}
 

@@ -5,6 +5,7 @@ import android.widget.ImageView
 import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
 
+
 class ContactViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
 
     private val tvName: TextView = itemView.findViewById(R.id.tv_name)
@@ -17,3 +18,4 @@ class ContactViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
         personPhoto.setImageBitmap(contact.photo)
     }
 }
+
