@@ -33,4 +33,7 @@ class ContactsAdapter(private var contactList: List<Contact>) :
         contactList = filteredContactList
         notifyDataSetChanged()
     }
+
+
+
 }

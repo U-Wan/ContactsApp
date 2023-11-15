@@ -19,15 +19,14 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Toast
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.widget.SearchView
-import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.sweeft.contactsapp.R
 import com.sweeft.contactsapp.data.Contact
-import java.io.FileNotFoundException
 import java.util.ArrayList
 import java.util.Locale
 
@@ -37,7 +36,6 @@ class ContactsFragment : Fragment() {
     private val contactList = mutableListOf<Contact>()
     private lateinit var recyclerView: RecyclerView
     private lateinit var searchView: SearchView
-
 
     private val DEBOUNCE_DELAY = 400L
     private val debounceHandler = Handler(Looper.getMainLooper())
@@ -54,11 +52,7 @@ class ContactsFragment : Fragment() {
         recyclerView.layoutManager = layoutManager
 
 
-        if (checkContactsPermission()) {
-            fetchContacts()
-            adapter = ContactsAdapter(contactList)
-            recyclerView.adapter = adapter
-        } else {
+        if (!checkContactsPermission()) {
             if (!hasRequestedPermissionBefore()) {
                 requestContactsPermission()
                 markPermissionAsRequested()
@@ -66,7 +60,17 @@ class ContactsFragment : Fragment() {
                 showPermissionDeniedDialog()
             }
         }
+        else {
+            fetchContacts()
+            adapter = ContactsAdapter(contactList)
+            recyclerView.adapter = adapter
+        }
 
+        setupSearchView()
+
+        return view
+    }
+    private fun setupSearchView() {
         searchView.setOnQueryTextListener(object : SearchView.OnQueryTextListener {
             override fun onQueryTextSubmit(query: String?): Boolean {
                 return false
@@ -81,7 +85,6 @@ class ContactsFragment : Fragment() {
                 return true
             }
         })
-        return view
     }
 
     private fun filterList(query: String?) {
@@ -95,7 +98,6 @@ class ContactsFragment : Fragment() {
             }
 
             if (filteredList.isEmpty()) {
-
                 Toast.makeText(activity, "No Data found", Toast.LENGTH_SHORT).show()
                 adapter.setFilteredList(emptyList())
             } else {
@@ -120,12 +122,20 @@ class ContactsFragment : Fragment() {
         ) == PackageManager.PERMISSION_GRANTED
     }
 
+    private val requestContactsPermissionLauncher =
+        registerForActivityResult(ActivityResultContracts.RequestPermission()) { isGranted ->
+            if (isGranted) {
+                fetchContacts()
+                adapter = ContactsAdapter(contactList)
+                recyclerView.adapter = adapter
+            } else {
+                Toast.makeText(activity, "You cannot use app without permission my friend", Toast.LENGTH_LONG).show()
+                requireActivity().finish()
+            }
+        }
+
     private fun requestContactsPermission() {
-        ActivityCompat.requestPermissions(
-            requireActivity(),
-            arrayOf(Manifest.permission.READ_CONTACTS),
-            REQUEST_READ_CONTACTS
-        )
+        requestContactsPermissionLauncher.launch(Manifest.permission.READ_CONTACTS)
     }
 
     //dialog
@@ -138,6 +148,9 @@ class ContactsFragment : Fragment() {
             }
             .setNegativeButton("Cancel") { dialog, _ ->
                 dialog.dismiss()
+
+                Toast.makeText(activity, "You cannot use app without permission my friend", Toast.LENGTH_LONG).show()
+                requireActivity().finish()
             }
             .create()
 
@@ -149,44 +162,6 @@ class ContactsFragment : Fragment() {
         val uri: Uri = Uri.fromParts("package", requireContext().packageName, null)
         intent.data = uri
         startActivity(intent)
-    }
-
-    override fun onRequestPermissionsResult(
-        requestCode: Int,
-        permissions: Array<out String>,
-        grantResults: IntArray
-    )  {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-
-        when (requestCode) {
-            REQUEST_READ_CONTACTS -> {
-                if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                    fetchContacts()
-                    adapter.updateData(contactList)
-                } else {
-                    showPermissionDeniedDialog()
-                }
-            }
-        }
-    }
-
-
-    private fun getPhotoUri(contentResolver: ContentResolver, contactId: String): Uri? {
-        val photoCursor: Cursor? = contentResolver.query(
-            ContactsContract.Data.CONTENT_URI,
-            arrayOf(ContactsContract.CommonDataKinds.Photo.PHOTO_URI),
-            ContactsContract.Data.CONTACT_ID + " = ? AND " + ContactsContract.Data.MIMETYPE + " = ?",
-            arrayOf(contactId, ContactsContract.CommonDataKinds.Photo.CONTENT_ITEM_TYPE),
-            null
-        )
-
-        return photoCursor?.use { photoCursorInner ->
-            if (photoCursorInner.moveToFirst()) {
-                Uri.parse(photoCursorInner.getString(0))
-            } else {
-                null
-            }
-        }
     }
 
     private fun fetchContacts() {
@@ -209,28 +184,44 @@ class ContactsFragment : Fragment() {
                 val name = contactsCursor.getString(nameIndex)
 
                 val phoneNumber = getPhoneNumber(contentResolver, contactId)
-                val photoResourceId = getContactPhoto(contentResolver, contactId)
+                val contactPhotoBitmap = getContactPhotoBitmap(contentResolver, contactId)
 
-                contactList.add(Contact(name, phoneNumber, photoResourceId))
+                contactList.add(Contact(name, phoneNumber, contactPhotoBitmap))
             }
         }
     }
-    private fun getContactPhoto(contentResolver: ContentResolver, contactId: String): Bitmap? {
-        val photoUri = getPhotoUri(contentResolver, contactId)
 
-        return photoUri?.let {
-            try {
-                BitmapFactory.decodeStream(contentResolver.openInputStream(it))
-            } catch (e: FileNotFoundException) {
-                // If there's an error loading the photo, return the default photo
-                getDefaultPhotoBitmap()
+    private fun getContactPhotoBitmap(contentResolver: ContentResolver, contactId: String): Bitmap? {
+        val photoCursor: Cursor? = contentResolver.query(
+            ContactsContract.Data.CONTENT_URI,
+            arrayOf(ContactsContract.CommonDataKinds.Photo.PHOTO),
+            ContactsContract.Data.CONTACT_ID + " = ? AND " + ContactsContract.Data.MIMETYPE + " = ?",
+            arrayOf(contactId, ContactsContract.CommonDataKinds.Photo.CONTENT_ITEM_TYPE),
+            null
+        )
+
+        return photoCursor?.use { cursor ->
+            if (cursor.moveToFirst()) {
+                val columnIndex = cursor.getColumnIndex(ContactsContract.CommonDataKinds.Photo.PHOTO)
+
+                if (columnIndex != -1) {
+                    val photoBlob = cursor.getBlob(columnIndex)
+                    if (photoBlob != null && photoBlob.isNotEmpty()) {
+                        return BitmapFactory.decodeByteArray(photoBlob, 0, photoBlob.size)
+                    }
+                }
             }
-        } ?: getDefaultPhotoBitmap()
+
+            // If there's no valid photo data, return the default photo
+            return getDefaultPhotoBitmap()
+        }
     }
+
     private fun getDefaultPhotoBitmap(): Bitmap? {
-        // Load the default photo from resources
         return BitmapFactory.decodeResource(resources, R.drawable.harold)
     }
+
+
     private fun getPhoneNumber(contentResolver: ContentResolver, contactId: String): String {
         val phoneCursor: Cursor? = contentResolver.query(
             ContactsContract.CommonDataKinds.Phone.CONTENT_URI,
@@ -249,8 +240,5 @@ class ContactsFragment : Fragment() {
                 ""
             }
         } ?: ""
-    }
-    companion object {
-        private const val REQUEST_READ_CONTACTS = 123
     }
 }
