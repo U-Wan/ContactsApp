@@ -18,6 +18,7 @@ import android.provider.Settings
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.ImageView
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.widget.SearchView
@@ -27,8 +28,6 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.sweeft.contactsapp.R
 import com.sweeft.contactsapp.data.Contact
-import java.util.ArrayList
-import java.util.Locale
 
 class ContactsFragment : Fragment() {
 
@@ -36,6 +35,7 @@ class ContactsFragment : Fragment() {
     private val contactList = mutableListOf<Contact>()
     private lateinit var recyclerView: RecyclerView
     private lateinit var searchView: SearchView
+    private lateinit var noDataImageView: ImageView
 
     private val DEBOUNCE_DELAY = 400L
     private val debounceHandler = Handler(Looper.getMainLooper())
@@ -48,9 +48,10 @@ class ContactsFragment : Fragment() {
         val view = inflater.inflate(R.layout.fragment_contacts, container, false)
         recyclerView = view.findViewById(R.id.recyclerView)
         searchView = view.findViewById(R.id.et_entered_number)
+        noDataImageView = view.findViewById(R.id.noDataImageView)
+
         val layoutManager = LinearLayoutManager(requireContext())
         recyclerView.layoutManager = layoutManager
-
 
         if (!checkContactsPermission()) {
             if (!hasRequestedPermissionBefore()) {
@@ -66,10 +67,11 @@ class ContactsFragment : Fragment() {
             recyclerView.adapter = adapter
         }
 
-        setupSearchView()
+       setupSearchView()
 
         return view
     }
+
     private fun setupSearchView() {
         searchView.setOnQueryTextListener(object : SearchView.OnQueryTextListener {
             override fun onQueryTextSubmit(query: String?): Boolean {
@@ -78,33 +80,45 @@ class ContactsFragment : Fragment() {
 
             override fun onQueryTextChange(newText: String?): Boolean {
                 debounceHandler.removeCallbacksAndMessages(null)
-                debounceHandler.postDelayed(
-                    { filterList(newText) },
-                    DEBOUNCE_DELAY
-                )
+                debounceHandler.postDelayed({
+
+                    // Filtering logic
+                    val filteredList = contactList.filter {
+                        it.phoneNumber.contains(newText.orEmpty(), ignoreCase = true) ||
+                                it.name.contains(newText.orEmpty(), ignoreCase = true)
+                    }
+
+                    //first:
+                    //adapter.filterList(newText)
+
+                    //second(more efective):
+                   // adapter.filter.filter(newText)
+
+
+                    if (filteredList.isEmpty()) {
+                        showPlaceholder()
+                    } else {
+                        hidePlaceholder()
+                    }
+
+                    adapter.setFilteredList(filteredList)
+                }, DEBOUNCE_DELAY)
+
                 return true
             }
         })
     }
 
-    private fun filterList(query: String?) {
-
-        if (query != null) {
-            val filteredList = ArrayList<Contact>()
-            for (i in contactList) {
-                if (i.phoneNumber.lowercase(Locale.ROOT).contains(query)||i.name.lowercase(Locale.ROOT).contains(query)) {
-                    filteredList.add(i)
-                }
-            }
-
-            if (filteredList.isEmpty()) {
-                Toast.makeText(activity, "No Data found", Toast.LENGTH_SHORT).show()
-                adapter.setFilteredList(emptyList())
-            } else {
-                adapter.setFilteredList(filteredList)
-            }
-        }
+    private fun showPlaceholder() {
+        recyclerView.visibility = View.GONE
+        noDataImageView.visibility = View.VISIBLE
     }
+
+    private fun hidePlaceholder() {
+        recyclerView.visibility = View.VISIBLE
+        noDataImageView.visibility = View.GONE
+    }
+
 
     private fun hasRequestedPermissionBefore(): Boolean {
         val preferences = requireActivity().getPreferences(Context.MODE_PRIVATE)
@@ -221,7 +235,6 @@ class ContactsFragment : Fragment() {
         return BitmapFactory.decodeResource(resources, R.drawable.harold)
     }
 
-
     private fun getPhoneNumber(contentResolver: ContentResolver, contactId: String): String {
         val phoneCursor: Cursor? = contentResolver.query(
             ContactsContract.CommonDataKinds.Phone.CONTENT_URI,
@@ -242,3 +255,6 @@ class ContactsFragment : Fragment() {
         } ?: ""
     }
 }
+
+
+
