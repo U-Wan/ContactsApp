@@ -22,12 +22,14 @@ import android.widget.ImageView
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.widget.SearchView
+import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.sweeft.contactsapp.R
 import com.sweeft.contactsapp.data.Contact
+
 
 class ContactsFragment : Fragment() {
 
@@ -63,13 +65,14 @@ class ContactsFragment : Fragment() {
         }
         else {
             fetchContacts()
-            adapter = ContactsAdapter(contactList)
+            adapter = ContactsAdapter(contactList,requireContext())
             recyclerView.adapter = adapter
         }
 
-       setupSearchView()
+        setupSearchView()
 
         return view
+
     }
 
     private fun setupSearchView() {
@@ -92,7 +95,7 @@ class ContactsFragment : Fragment() {
                     //adapter.filterList(newText)
 
                     //second(more efective):
-                   // adapter.filter.filter(newText)
+                    // adapter.filter.filter(newText)
 
 
                     if (filteredList.isEmpty()) {
@@ -119,7 +122,6 @@ class ContactsFragment : Fragment() {
         noDataImageView.visibility = View.GONE
     }
 
-
     private fun hasRequestedPermissionBefore(): Boolean {
         val preferences = requireActivity().getPreferences(Context.MODE_PRIVATE)
         return preferences.getBoolean("hasRequestedPermission", false)
@@ -140,7 +142,7 @@ class ContactsFragment : Fragment() {
         registerForActivityResult(ActivityResultContracts.RequestPermission()) { isGranted ->
             if (isGranted) {
                 fetchContacts()
-                adapter = ContactsAdapter(contactList)
+                adapter = ContactsAdapter(contactList,requireContext())
                 recyclerView.adapter = adapter
             } else {
                 Toast.makeText(activity, "You cannot use app without permission my friend", Toast.LENGTH_LONG).show()
@@ -151,6 +153,8 @@ class ContactsFragment : Fragment() {
     private fun requestContactsPermission() {
         requestContactsPermissionLauncher.launch(Manifest.permission.READ_CONTACTS)
     }
+
+
 
     //dialog
     private fun showPermissionDeniedDialog() {
@@ -254,7 +258,5 @@ class ContactsFragment : Fragment() {
             }
         } ?: ""
     }
+
 }
-
-
-
