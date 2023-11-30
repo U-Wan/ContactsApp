@@ -7,4 +7,5 @@
     <string name="_123_456_7890">123-456-7890</string>
     <string name="call">Call</string>
     <string name="search_here">Search here ...</string>
+    <string name="permission_message">This app needs the Read Contacts permission to display contacts. Please grant the permission in the app settings.</string>
 </resources>

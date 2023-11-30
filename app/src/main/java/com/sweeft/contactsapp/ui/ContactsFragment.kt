@@ -11,10 +11,9 @@ import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.net.Uri
 import android.os.Bundle
-import android.os.Handler
-import android.os.Looper
 import android.provider.ContactsContract
 import android.provider.Settings
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -24,166 +23,66 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.widget.SearchView
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
+import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.sweeft.contactsapp.R
 import com.sweeft.contactsapp.data.Contact
 import com.sweeft.contactsapp.databinding.FragmentContactsBinding
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 class ContactsFragment : Fragment() {
-
     private lateinit var binding: FragmentContactsBinding
     private lateinit var adapter: ContactsAdapter
-    private val contactList = mutableListOf<Contact>()
     private lateinit var recyclerView: RecyclerView
     private lateinit var searchView: SearchView
     private lateinit var noDataImageView: ImageView
 
-    private val DEBOUNCE_DELAY = 400L
-    private val debounceHandler = Handler(Looper.getMainLooper())
+    private val contactList = mutableListOf<Contact>()
+    private lateinit var originalContactList: List<Contact>
+    private var filteredContactList: List<Contact> = mutableListOf()
+
+    private val debounceDelay = 400L // milliseconds
 
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View? {
-
-
         binding = FragmentContactsBinding.inflate(inflater, container, false)
         val view = binding.root
-
         recyclerView = binding.recyclerView
         searchView = binding.etEnteredNumber
         noDataImageView = binding.noDataImageView
 
-
-
         val layoutManager = LinearLayoutManager(requireContext())
         recyclerView.layoutManager = layoutManager
 
-        if (!checkContactsPermission()) {
-            if (!hasRequestedPermissionBefore()) {
-                requestContactsPermission()
-                markPermissionAsRequested()
-            } else {
-                showPermissionDeniedDialog()
-            }
-        }
-        else {
-            fetchContacts()
-            adapter = ContactsAdapter(contactList,requireContext())
-            recyclerView.adapter = adapter
-        }
 
         setupSearchView()
 
         return view
-
     }
 
-    private fun setupSearchView() {
-        searchView.setOnQueryTextListener(object : SearchView.OnQueryTextListener {
-            override fun onQueryTextSubmit(query: String?): Boolean {
-                return false
-            }
 
-            override fun onQueryTextChange(newText: String?): Boolean {
-                debounceHandler.removeCallbacksAndMessages(null)
-                debounceHandler.postDelayed({
-
-                    // Filtering logic
-                    val filteredList = contactList.filter { contact ->
-                        val sanitizedQuery = newText.orEmpty().replace("\\s".toRegex(), "")
-                        val sanitizedPhoneNumber = contact.phoneNumber?.replace("\\s".toRegex(), "")
-                        val sanitizedName = contact.name?.replace("\\s".toRegex(), "")
-
-                        sanitizedPhoneNumber?.contains(sanitizedQuery, ignoreCase = true) == true ||
-                                sanitizedName?.contains(sanitizedQuery, ignoreCase = true) == true
-                    }
-
-
-                    if (filteredList.isEmpty()) {
-                        showPlaceholder()
-                    } else {
-                        hidePlaceholder()
-                    }
-
-                    adapter.setFilteredList(filteredList)
-                }, DEBOUNCE_DELAY)
-
-                return true
-            }
-        })
-    }
-
-    private fun showPlaceholder() {
-        recyclerView.visibility = View.GONE
-        noDataImageView.visibility = View.VISIBLE
-    }
-
-    private fun hidePlaceholder() {
-        recyclerView.visibility = View.VISIBLE
-        noDataImageView.visibility = View.GONE
-    }
-
-    private fun hasRequestedPermissionBefore(): Boolean {
-        val preferences = requireActivity().getPreferences(Context.MODE_PRIVATE)
-        return preferences.getBoolean("hasRequestedPermission", false)
-    }
-
-    private fun markPermissionAsRequested() {
-        val preferences = requireActivity().getPreferences(Context.MODE_PRIVATE)
-        preferences.edit().putBoolean("hasRequestedPermission", true).apply()
-    }
-    private fun checkContactsPermission(): Boolean {
-        return ContextCompat.checkSelfPermission(
-            requireContext(),
-            Manifest.permission.READ_CONTACTS
-        ) == PackageManager.PERMISSION_GRANTED
-    }
-
-    private val requestContactsPermissionLauncher =
-        registerForActivityResult(ActivityResultContracts.RequestPermission()) { isGranted ->
-            if (isGranted) {
-                fetchContacts()
-                adapter = ContactsAdapter(contactList,requireContext())
-                recyclerView.adapter = adapter
-            } else {
-                Toast.makeText(activity, "You should accept permissions my friend", Toast.LENGTH_LONG).show()
-            }
+    private fun handleNoContactsPermission() {
+        if (!hasRequestedPermissionBefore()) {
+            requestContactsPermission()
+            markPermissionAsRequested()
+        } else {
+            showPermissionDeniedDialog()
         }
-
-    private fun requestContactsPermission() {
-        requestContactsPermissionLauncher.launch(Manifest.permission.READ_CONTACTS)
     }
-
-    //dialog
-    private fun showPermissionDeniedDialog() {
-        val dialog = AlertDialog.Builder(requireContext())
-            .setTitle("Permission Required")
-            .setMessage("This app needs the Read Contacts permission to display contacts. Please grant the permission in the app settings.")
-            .setPositiveButton("Open Settings") { _, _ ->
-                openAppSettings()
-            }
-            .setNegativeButton("Cancel") { dialog, _ ->
-                dialog.dismiss()
-
-                Toast.makeText(activity, "You cannot use app without permission my friend", Toast.LENGTH_LONG).show()
-                requireActivity().finish()
-            }
-            .create()
-
-        dialog.show()
+    private fun fetchAndDisplayContacts() {
+        fetchContacts()
+        originalContactList = contactList.toList()
+        initializeAdapter()
     }
-
-    private fun openAppSettings() {
-        val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS)
-        val uri: Uri = Uri.fromParts("package", requireContext().packageName, null)
-        intent.data = uri
-        startActivity(intent)
-    }
-
     private fun fetchContacts() {
+        contactList.clear()
+
         val contentResolver: ContentResolver = requireActivity().contentResolver
         val cursor: Cursor? = contentResolver.query(
             ContactsContract.Contacts.CONTENT_URI,
@@ -208,9 +107,123 @@ class ContactsFragment : Fragment() {
                 contactList.add(Contact(name, phoneNumber, contactPhotoBitmap))
             }
         }
+        cursor?.close()
     }
 
-    private fun getContactPhotoBitmap(contentResolver: ContentResolver, contactId: String): Bitmap? {
+    private fun initializeAdapter() {
+        adapter = ContactsAdapter(requireContext())
+        recyclerView.adapter = adapter
+        adapter.submitList(originalContactList)
+    }
+    override fun onStart() {
+        super.onStart()
+        if (!checkContactsPermission()) {
+            handleNoContactsPermission()
+        } else {
+            if (contactList.isEmpty() && checkContactsPermission()) {
+                fetchAndDisplayContacts()
+            }
+        }
+    }
+
+    private fun showPlaceholder() {
+        recyclerView.visibility = View.GONE
+        noDataImageView.visibility = View.VISIBLE
+    }
+
+    private fun hidePlaceholder() {
+        recyclerView.visibility = View.VISIBLE
+        noDataImageView.visibility = View.GONE
+    }
+
+    private fun hasRequestedPermissionBefore(): Boolean {
+        val preferences = requireActivity().getPreferences(Context.MODE_PRIVATE)
+        return preferences.getBoolean("hasRequestedPermission", false)
+    }
+
+    private fun markPermissionAsRequested() {
+        val preferences = requireActivity().getPreferences(Context.MODE_PRIVATE)
+        preferences.edit().putBoolean("hasRequestedPermission", true).apply()
+    }
+
+
+    private fun checkContactsPermission(): Boolean {
+        return ContextCompat.checkSelfPermission(
+            requireContext(),
+            Manifest.permission.READ_CONTACTS
+        ) == PackageManager.PERMISSION_GRANTED
+    }
+
+    private val requestContactsPermissionLauncher =
+        registerForActivityResult(ActivityResultContracts.RequestPermission()) { isGranted ->
+            if (isGranted) {
+                fetchContacts()
+                originalContactList = contactList.toList() // Update the original list
+                if (::adapter.isInitialized) {
+                    adapter.submitList(originalContactList)
+                } else {
+                    initializeAdapter()
+                }
+            } else {
+                requireView().showToast("You should accept permissions my friend")
+            }
+        }
+
+
+    private fun requestContactsPermission() {
+        requestContactsPermissionLauncher.launch(Manifest.permission.READ_CONTACTS)
+    }
+
+    // Dialog
+    private fun showPermissionDeniedDialog() {
+        val dialog = AlertDialog.Builder(requireContext())
+            .setTitle("Permission Required")
+            .setMessage(getString(R.string.permission_message))
+            .setPositiveButton("Open Settings") { _, _ ->
+                openAppSettings()
+            }
+            .setNegativeButton("Cancel") { dialog, _ ->
+                dialog.dismiss()
+                requireView().showToast("You cannot use app without permission my friend")
+            }
+            .create()
+
+        dialog.show()
+    }
+
+    private fun openAppSettings() {
+        val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS)
+        val uri: Uri = Uri.fromParts("package", requireContext().packageName, null)
+        intent.data = uri
+        startActivity(intent)
+    }
+
+
+    private fun updateFilteredContacts(query: String?) {
+        filteredContactList = originalContactList.filter { contact ->
+            val sanitizedQuery = query.orEmpty().replace("\\s".toRegex(), "")
+            val sanitizedPhoneNumber = contact.phoneNumber?.replace("\\s".toRegex(), "")
+            val sanitizedName = contact.name?.replace("\\s".toRegex(), "")
+
+            sanitizedPhoneNumber?.contains(sanitizedQuery, ignoreCase = true) == true ||
+                    sanitizedName?.contains(sanitizedQuery, ignoreCase = true) == true
+        }
+
+        if (::adapter.isInitialized) {
+            adapter.submitFilteredList(filteredContactList)
+        }
+
+        if (filteredContactList.isEmpty()) {
+            showPlaceholder()
+        } else {
+            hidePlaceholder()
+        }
+    }
+
+    private fun getContactPhotoBitmap(
+        contentResolver: ContentResolver,
+        contactId: String
+    ): Bitmap? {
         val photoCursor: Cursor? = contentResolver.query(
             ContactsContract.Data.CONTENT_URI,
             arrayOf(ContactsContract.CommonDataKinds.Photo.PHOTO),
@@ -221,7 +234,8 @@ class ContactsFragment : Fragment() {
 
         return photoCursor?.use { cursor ->
             if (cursor.moveToFirst()) {
-                val columnIndex = cursor.getColumnIndex(ContactsContract.CommonDataKinds.Photo.PHOTO)
+                val columnIndex =
+                    cursor.getColumnIndex(ContactsContract.CommonDataKinds.Photo.PHOTO)
 
                 if (columnIndex != -1) {
                     val photoBlob = cursor.getBlob(columnIndex)
@@ -260,4 +274,33 @@ class ContactsFragment : Fragment() {
         } ?: ""
     }
 
+
+    private fun setupSearchView() {
+        var job: Job? = null
+
+        searchView.setOnQueryTextListener(object : SearchView.OnQueryTextListener {
+            override fun onQueryTextSubmit(query: String?): Boolean {
+                return false
+            }
+
+            override fun onQueryTextChange(newText: String?): Boolean {
+                job?.cancel()
+
+                job = lifecycleScope.launch {
+                    delay(debounceDelay)
+                    updateFilteredContacts(newText)
+                }
+
+                return true
+            }
+        })
+    }
+
 }
+fun View.showToast(
+    message: CharSequence) {
+    Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+}
+
+
+

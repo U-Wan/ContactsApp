@@ -1,18 +1,19 @@
 package com.sweeft.contactsapp.ui
 
+import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.view.LayoutInflater
+import android.view.View
 import android.view.ViewGroup
-import androidx.recyclerview.widget.RecyclerView
+import androidx.recyclerview.widget.DiffUtil
+import androidx.recyclerview.widget.ListAdapter
 import com.sweeft.contactsapp.data.Contact
 import com.sweeft.contactsapp.databinding.ContactBinding
-import android.content.Context
 import android.widget.Toast
 
-class ContactsAdapter(private var originalContactList: List<Contact>, private val context: Context) :
-    RecyclerView.Adapter<ContactViewHolder>() {
-    private var contactList: List<Contact> = originalContactList
+class ContactsAdapter(private val context: Context) :
+    ListAdapter<Contact, ContactViewHolder>(ContactDiffCallback()) {
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ContactViewHolder {
         val inflater = LayoutInflater.from(parent.context)
@@ -21,7 +22,7 @@ class ContactsAdapter(private var originalContactList: List<Contact>, private va
     }
 
     override fun onBindViewHolder(holder: ContactViewHolder, position: Int) {
-        val contact = contactList[position]
+        val contact = getItem(position)
         holder.bind(contact)
 
         val isExpandable: Boolean = contact.isExpandable == true
@@ -33,37 +34,34 @@ class ContactsAdapter(private var originalContactList: List<Contact>, private va
 
         holder.setOnItemClickListener { clickedPosition ->
             isAnyItemExpanded(clickedPosition)
-            contact.isExpandable = contact.isExpandable
+            contact.isExpandable = !contact.isExpandable!!
             notifyItemChanged(clickedPosition, Unit)
         }
 
-        holder.setOnButtonCallClickListener { clickedPosition ->
+        holder.setOnButtonCallClickListener {
             makeVoiceCall(contact.phoneNumber)
         }
 
-        holder.setOnButtonMessageClickListener { clickedPosition ->
+        holder.setOnButtonMessageClickListener {
             openMessagingApp(contact.phoneNumber)
         }
     }
 
-    private fun isAnyItemExpanded(position: Int){
-        val temp = originalContactList.indexOfFirst {
+    fun submitFilteredList(filteredContacts: List<Contact>) {
+        submitList(filteredContacts)
+    }
+
+    private fun isAnyItemExpanded(position: Int) {
+        val temp = currentList.indexOfFirst {
             it.isExpandable == true
         }
-        if (temp >= 0 && temp != position){
-            originalContactList[temp].isExpandable = false
-            notifyItemChanged(temp , 0)
+        if (temp>=0&&temp != position) {
+            val updatedList = currentList.toMutableList()
+            updatedList[temp].isExpandable = false
+            submitList(updatedList)
         }
     }
 
-    override fun getItemCount(): Int {
-        return contactList.size
-    }
-
-    fun setFilteredList(filteredContactList: List<Contact>) {
-        contactList = filteredContactList
-        notifyDataSetChanged()
-    }
     private fun makeVoiceCall(phoneNumber: String?) {
         if (!phoneNumber.isNullOrBlank()) {
             val uri = Uri.parse("tel:$phoneNumber")
@@ -80,8 +78,25 @@ class ContactsAdapter(private var originalContactList: List<Contact>, private va
             val intent = Intent(Intent.ACTION_SENDTO, uri)
             context.startActivity(intent)
         } else {
+
             Toast.makeText(context, "Invalid phone number", Toast.LENGTH_SHORT).show()
         }
     }
+
+
 }
+
+class ContactDiffCallback : DiffUtil.ItemCallback<Contact>() {
+    override fun areItemsTheSame(oldItem: Contact, newItem: Contact): Boolean {
+        return oldItem.phoneNumber == newItem.phoneNumber
+    }
+
+    override fun areContentsTheSame(oldItem: Contact, newItem: Contact): Boolean {
+        return oldItem == newItem
+    }
+
+}
+
+
+
 
