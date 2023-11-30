@@ -22,17 +22,17 @@ import android.widget.ImageView
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.widget.SearchView
-import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.sweeft.contactsapp.R
 import com.sweeft.contactsapp.data.Contact
-
+import com.sweeft.contactsapp.databinding.FragmentContactsBinding
 
 class ContactsFragment : Fragment() {
 
+    private lateinit var binding: FragmentContactsBinding
     private lateinit var adapter: ContactsAdapter
     private val contactList = mutableListOf<Contact>()
     private lateinit var recyclerView: RecyclerView
@@ -47,10 +47,16 @@ class ContactsFragment : Fragment() {
         container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View? {
-        val view = inflater.inflate(R.layout.fragment_contacts, container, false)
-        recyclerView = view.findViewById(R.id.recyclerView)
-        searchView = view.findViewById(R.id.et_entered_number)
-        noDataImageView = view.findViewById(R.id.noDataImageView)
+
+
+        binding = FragmentContactsBinding.inflate(inflater, container, false)
+        val view = binding.root
+
+        recyclerView = binding.recyclerView
+        searchView = binding.etEnteredNumber
+        noDataImageView = binding.noDataImageView
+
+
 
         val layoutManager = LinearLayoutManager(requireContext())
         recyclerView.layoutManager = layoutManager
@@ -86,16 +92,14 @@ class ContactsFragment : Fragment() {
                 debounceHandler.postDelayed({
 
                     // Filtering logic
-                    val filteredList = contactList.filter {
-                        it.phoneNumber.contains(newText.orEmpty(), ignoreCase = true) ||
-                                it.name.contains(newText.orEmpty(), ignoreCase = true)
+                    val filteredList = contactList.filter { contact ->
+                        val sanitizedQuery = newText.orEmpty().replace("\\s".toRegex(), "")
+                        val sanitizedPhoneNumber = contact.phoneNumber?.replace("\\s".toRegex(), "")
+                        val sanitizedName = contact.name?.replace("\\s".toRegex(), "")
+
+                        sanitizedPhoneNumber?.contains(sanitizedQuery, ignoreCase = true) == true ||
+                                sanitizedName?.contains(sanitizedQuery, ignoreCase = true) == true
                     }
-
-                    //first:
-                    //adapter.filterList(newText)
-
-                    //second(more efective):
-                    // adapter.filter.filter(newText)
 
 
                     if (filteredList.isEmpty()) {
@@ -145,16 +149,13 @@ class ContactsFragment : Fragment() {
                 adapter = ContactsAdapter(contactList,requireContext())
                 recyclerView.adapter = adapter
             } else {
-                Toast.makeText(activity, "You cannot use app without permission my friend", Toast.LENGTH_LONG).show()
-                requireActivity().finish()
+                Toast.makeText(activity, "You should accept permissions my friend", Toast.LENGTH_LONG).show()
             }
         }
 
     private fun requestContactsPermission() {
         requestContactsPermissionLauncher.launch(Manifest.permission.READ_CONTACTS)
     }
-
-
 
     //dialog
     private fun showPermissionDeniedDialog() {

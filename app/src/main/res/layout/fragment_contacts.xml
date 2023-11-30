@@ -28,7 +28,7 @@
             android:layout_height="wrap_content"
             app:iconifiedByDefault="false"
             app:queryBackground="@android:color/transparent"
-            app:queryHint="Search here ..." />
+            app:queryHint="@string/search_here" />
 
     </com.google.android.material.card.MaterialCardView>
 
