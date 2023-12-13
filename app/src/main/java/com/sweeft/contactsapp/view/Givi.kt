@@ -271,9 +271,6 @@ class ContactsFragment : Fragment() {
     }
 
 
-
-
-
     private fun setupSearchView() {
         var job: Job? = null
 
@@ -299,4 +296,5 @@ class ContactsFragment : Fragment() {
 fun View.showToast(
     message: CharSequence) {
     Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
-}*/
+}
+*/

@@ -2,11 +2,9 @@ package com.sweeft.contactsapp.view
 
 import android.content.Context
 import android.content.Intent
-import android.content.res.Resources
 import android.net.Uri
 import android.view.LayoutInflater
 import android.view.ViewGroup
-import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
 import com.sweeft.contactsapp.model.Contact
 import com.sweeft.contactsapp.databinding.ContactBinding
@@ -47,8 +45,6 @@ class ContactsAdapter(private val context: Context) :
         }
     }
 
-    // ... rest of the adapter methods
-
     private fun makeVoiceCall(phoneNumber: String?) {
         if (!phoneNumber.isNullOrBlank()) {
             val dialIntent = Intent(Intent.ACTION_DIAL, Uri.parse("tel:$phoneNumber"))
@@ -83,15 +79,7 @@ class ContactsAdapter(private val context: Context) :
     }
 }
 
-class ContactDiffCallback : DiffUtil.ItemCallback<Contact>() {
-    override fun areItemsTheSame(oldItem: Contact, newItem: Contact): Boolean {
-        return oldItem.phoneNumber == newItem.phoneNumber
-    }
 
-    override fun areContentsTheSame(oldItem: Contact, newItem: Contact): Boolean {
-        return oldItem == newItem
-    }
-}
 
 
 

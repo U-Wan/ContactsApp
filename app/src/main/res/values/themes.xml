@@ -9,6 +9,7 @@
     <style name="AppTheme" parent="Theme.MaterialComponents.DayNight.DarkActionBar">
         <item name="colorPrimary">@color/gray</item>
         <item name="colorPrimaryDark">@color/gray</item>
+        <item name="android:label">""</item>
         <item name="colorAccent">@color/white</item>
     </style>
 

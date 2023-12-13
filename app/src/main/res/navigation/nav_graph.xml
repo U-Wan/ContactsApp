@@ -7,7 +7,7 @@
 
     <fragment
         android:id="@+id/fragmentAdd"
-        android:name="com.sweeft.contactsapp.view.AddContactFragment"
+        android:name="com.sweeft.contactsapp.view.Fragments.AddContactFragment"
         android:label="fragment_add"
         tools:layout="@layout/fragment_add_contact" >
         <action
@@ -16,7 +16,7 @@
     </fragment>
     <fragment
         android:id="@+id/contactsFragment"
-        android:name="com.sweeft.contactsapp.view.ContactsFragment"
+        android:name="com.sweeft.contactsapp.view.Fragments.ContactsFragment"
         android:label="fragment_contacts"
         tools:layout="@layout/fragment_contacts" >
         <action
