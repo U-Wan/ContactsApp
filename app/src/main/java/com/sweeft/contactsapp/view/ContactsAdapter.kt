@@ -1,14 +1,14 @@
-package com.sweeft.contactsapp.ui
+package com.sweeft.contactsapp.view
 
 import android.content.Context
 import android.content.Intent
+import android.content.res.Resources
 import android.net.Uri
 import android.view.LayoutInflater
-import android.view.View
 import android.view.ViewGroup
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
-import com.sweeft.contactsapp.data.Contact
+import com.sweeft.contactsapp.model.Contact
 import com.sweeft.contactsapp.databinding.ContactBinding
 import android.widget.Toast
 
@@ -47,43 +47,40 @@ class ContactsAdapter(private val context: Context) :
         }
     }
 
-    fun submitFilteredList(filteredContacts: List<Contact>) {
-        submitList(filteredContacts)
+    // ... rest of the adapter methods
+
+    private fun makeVoiceCall(phoneNumber: String?) {
+        if (!phoneNumber.isNullOrBlank()) {
+            val dialIntent = Intent(Intent.ACTION_DIAL, Uri.parse("tel:$phoneNumber"))
+            context.startActivity(dialIntent)
+        } else {
+            showToast("Invalid phone number")
+        }
     }
 
-    private fun isAnyItemExpanded(position: Int) {
+    private fun openMessagingApp(phoneNumber: String?) {
+        if (!phoneNumber.isNullOrBlank()) {
+            val smsIntent = Intent(Intent.ACTION_SENDTO, Uri.parse("smsto:$phoneNumber"))
+            context.startActivity(smsIntent)
+        } else {
+            showToast("Invalid phone number")
+        }
+    }
+
+    private fun isAnyItemExpanded(clickedPosition: Int) {
         val temp = currentList.indexOfFirst {
             it.isExpandable == true
         }
-        if (temp>=0&&temp != position) {
+        if (temp >= 0 && temp != clickedPosition) {
             val updatedList = currentList.toMutableList()
             updatedList[temp].isExpandable = false
             submitList(updatedList)
         }
     }
 
-    private fun makeVoiceCall(phoneNumber: String?) {
-        if (!phoneNumber.isNullOrBlank()) {
-            val uri = Uri.parse("tel:$phoneNumber")
-            val intent = Intent(Intent.ACTION_DIAL, uri)
-            context.startActivity(intent)
-        } else {
-            Toast.makeText(context, "Invalid phone number", Toast.LENGTH_SHORT).show()
-        }
+    private fun showToast(message: String) {
+        Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
     }
-
-    private fun openMessagingApp(phoneNumber: String?) {
-        if (!phoneNumber.isNullOrBlank()) {
-            val uri = Uri.parse("smsto:$phoneNumber")
-            val intent = Intent(Intent.ACTION_SENDTO, uri)
-            context.startActivity(intent)
-        } else {
-
-            Toast.makeText(context, "Invalid phone number", Toast.LENGTH_SHORT).show()
-        }
-    }
-
-
 }
 
 class ContactDiffCallback : DiffUtil.ItemCallback<Contact>() {
@@ -94,8 +91,8 @@ class ContactDiffCallback : DiffUtil.ItemCallback<Contact>() {
     override fun areContentsTheSame(oldItem: Contact, newItem: Contact): Boolean {
         return oldItem == newItem
     }
-
 }
+
 
 
 

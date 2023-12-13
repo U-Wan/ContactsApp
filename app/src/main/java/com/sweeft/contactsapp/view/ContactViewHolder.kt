@@ -1,8 +1,8 @@
-package com.sweeft.contactsapp.ui
+package com.sweeft.contactsapp.view
 
 import android.view.View
 import androidx.recyclerview.widget.RecyclerView
-import com.sweeft.contactsapp.data.Contact
+import com.sweeft.contactsapp.model.Contact
 import com.sweeft.contactsapp.databinding.ContactBinding
 
 class ContactViewHolder(private val binding: ContactBinding) :

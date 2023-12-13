@@ -1,6 +1,24 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+
+    <color name="text_color1">#958B8B</color>
+    <color name="floating_button">#5DD0DF</color>
+
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
-    <color name="text_color1">#958B8B</color>
+    <color name="orange1">#EA6715</color>
+    <color name="orange2">#FCE7DA</color>
+
+    <color name="orange3">#efa678</color>
+    <color name="gray">#5C6E8F</color>
+    <color name="background">#C9CACD</color>
+
+    <color name="menu_text_color">#1C3564</color>
+    <color name="hint_color">#5b6e8e</color>
+    <color name="menu_color">#f6f6f6</color>
+    <color name="gray_second">#5C6E8F</color>
+    <color name="error_text_color">#E63A3A</color>
+
+
+
 </resources>

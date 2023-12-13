@@ -8,4 +8,5 @@
     <string name="call">Call</string>
     <string name="search_here">Search here ...</string>
     <string name="permission_message">This app needs the Read Contacts permission to display contacts. Please grant the permission in the app settings.</string>
+    <string name="add">Add</string>
 </resources>

@@ -5,4 +5,14 @@
     <style name="Circular">
         <item name="cornerSize">50%</item>
     </style>
+
+    <style name="MyTextInputEditTextStyle" parent="Widget.MaterialComponents.TextInputEditText.OutlinedBox">
+        <item name="android:backgroundTint">@android:color/white</item>
+        <item name="boxBackgroundColor">@android:color/white</item>
+        <item name="boxStrokeColor">#00BCD4</item>
+        <item name="boxStrokeWidth">2dp</item>
+        <item name="android:textSize">18sp</item>
+        <!-- Add any other attributes you need for your EditText here -->
+    </style>
+
 </resources>

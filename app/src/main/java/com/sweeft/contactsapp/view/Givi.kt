@@ -1,4 +1,7 @@
-package com.sweeft.contactsapp.ui
+/*
+package com.sweeft.contactsapp.view
+
+package com.sweeft.contactsapp.view
 
 import android.Manifest
 import android.app.AlertDialog
@@ -13,7 +16,6 @@ import android.net.Uri
 import android.os.Bundle
 import android.provider.ContactsContract
 import android.provider.Settings
-import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -24,10 +26,12 @@ import androidx.appcompat.widget.SearchView
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
+import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import com.google.android.material.floatingactionbutton.FloatingActionButton
 import com.sweeft.contactsapp.R
-import com.sweeft.contactsapp.data.Contact
+import com.sweeft.contactsapp.model.Contact
 import com.sweeft.contactsapp.databinding.FragmentContactsBinding
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -39,6 +43,7 @@ class ContactsFragment : Fragment() {
     private lateinit var recyclerView: RecyclerView
     private lateinit var searchView: SearchView
     private lateinit var noDataImageView: ImageView
+    private lateinit var actionButton:FloatingActionButton
 
     private val contactList = mutableListOf<Contact>()
     private lateinit var originalContactList: List<Contact>
@@ -53,6 +58,7 @@ class ContactsFragment : Fragment() {
     ): View? {
         binding = FragmentContactsBinding.inflate(inflater, container, false)
         val view = binding.root
+
         recyclerView = binding.recyclerView
         searchView = binding.etEnteredNumber
         noDataImageView = binding.noDataImageView
@@ -63,9 +69,18 @@ class ContactsFragment : Fragment() {
 
         setupSearchView()
 
+
         return view
     }
 
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
+
+        binding.fab.setOnClickListener {
+            findNavController().navigate(R.id.action_contactsFragment_to_fragmentAdd)
+
+        }
+    }
 
     private fun handleNoContactsPermission() {
         if (!hasRequestedPermissionBefore()) {
@@ -108,6 +123,11 @@ class ContactsFragment : Fragment() {
             }
         }
         cursor?.close()
+    }
+
+
+    private fun getDefaultPhotoBitmap(): Bitmap? {
+        return BitmapFactory.decodeResource(resources, R.drawable.harold)
     }
 
     private fun initializeAdapter() {
@@ -250,29 +270,8 @@ class ContactsFragment : Fragment() {
         }
     }
 
-    private fun getDefaultPhotoBitmap(): Bitmap? {
-        return BitmapFactory.decodeResource(resources, R.drawable.harold)
-    }
 
-    private fun getPhoneNumber(contentResolver: ContentResolver, contactId: String): String {
-        val phoneCursor: Cursor? = contentResolver.query(
-            ContactsContract.CommonDataKinds.Phone.CONTENT_URI,
-            null,
-            ContactsContract.CommonDataKinds.Phone.CONTACT_ID + " = ?",
-            arrayOf(contactId),
-            null
-        )
 
-        return phoneCursor?.use { phoneCursorInner ->
-            if (phoneCursorInner.moveToFirst()) {
-                val phoneNumberColumnIndex =
-                    phoneCursorInner.getColumnIndex(ContactsContract.CommonDataKinds.Phone.NUMBER)
-                phoneCursorInner.getString(phoneNumberColumnIndex)
-            } else {
-                ""
-            }
-        } ?: ""
-    }
 
 
     private fun setupSearchView() {
@@ -300,7 +299,4 @@ class ContactsFragment : Fragment() {
 fun View.showToast(
     message: CharSequence) {
     Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
-}
-
-
-
+}*/

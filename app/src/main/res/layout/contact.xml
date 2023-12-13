@@ -23,7 +23,7 @@
             android:id="@+id/bottomconstarintlayout"
             android:layout_width="match_parent"
             android:orientation="horizontal"
-            android:layout_height="60dp"
+            android:layout_height="wrap_content"
             android:padding="1dp">
 
             <com.google.android.material.imageview.ShapeableImageView
